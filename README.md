@@ -43,3 +43,9 @@ The build copies `data/` into `dist/data`, so the produced app remains self-cont
 ## References
 
 [https://cosmograph.app/](https://cosmograph.app/)
+
+## Citing
+
+Rokotyan, N., Stukova, O., Kolmakova D. & Ovsyannikov, D. (2022). Cosmograph: GPU-accelerated Force Graph Layout and Rendering [Computer software]. https://cosmograph.app/
+
+This citation includes the names of the developers (Rokotyan, N., Stukova, O., Kolmakova D., & Ovsyannikov, D.), the year of publication (2022), the title of the software (Cosmograph: GPU-accelerated Force Graph Layout and Rendering), and the medium (Computer software). The URL (https://cosmograph.app/) should also be included to provide a direct link to the software.
