@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Cosmograph } from '@cosmograph/react/cosmograph.js'
+import { Cosmograph } from '@cosmograph/react'
 import type { ComponentProps } from 'react'
 
 type PointRecord = Record<string, unknown>
