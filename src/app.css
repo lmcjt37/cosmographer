@@ -1,0 +1,119 @@
+:root {
+  color-scheme: light;
+  font-family: "IBM Plex Sans", "Helvetica Neue", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  background:
+    radial-gradient(circle at top left, rgba(238, 191, 82, 0.28), transparent 28%),
+    radial-gradient(circle at top right, rgba(83, 143, 228, 0.18), transparent 34%),
+    linear-gradient(180deg, #f8f4eb 0%, #f0ebe2 100%);
+  color: #1a1815;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+}
+
+code {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+  min-height: 100%;
+  padding: 1rem;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: end;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid rgba(26, 24, 21, 0.08);
+  border-radius: 1.25rem;
+  background: rgba(255, 251, 245, 0.88);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px rgba(84, 66, 38, 0.08);
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8f6b1a;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1;
+}
+
+.app-copy {
+  max-width: 34rem;
+  margin: 0;
+  color: #4f4a43;
+}
+
+.graph-panel {
+  min-height: 0;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  border: 1px solid rgba(26, 24, 21, 0.08);
+  background: rgba(255, 251, 245, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.graph-canvas,
+.status-panel {
+  width: 100%;
+  height: 100%;
+}
+
+.status-panel {
+  display: grid;
+  place-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.status-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.status-panel p {
+  max-width: 32rem;
+  margin: 0;
+  color: #4f4a43;
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    padding: 0.75rem;
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: start;
+  }
+}
