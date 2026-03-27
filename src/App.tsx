@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Cosmograph } from '@cosmograph/react'
+import { Cosmograph } from '@cosmograph/react/cosmograph.js'
 import type { ComponentProps } from 'react'
 
 type PointRecord = Record<string, unknown>
@@ -64,7 +64,7 @@ export default function App() {
           links,
           config: {
             ...indexedConfig,
-            ...(layoutConfig ?? {}),
+            // ...(layoutConfig ?? {}),
           },
         })
       } catch (loadError) {
@@ -97,13 +97,34 @@ export default function App() {
       </header>
 
       <section className="graph-panel">
+        {graph ? (
+          <aside className="debug-panel" aria-label="Graph statistics">
+            <div className="debug-stat">
+              <span className="debug-label">Points</span>
+              <strong className="debug-value">{graph.points.length}</strong>
+            </div>
+            <div className="debug-stat">
+              <span className="debug-label">Links</span>
+              <strong className="debug-value">{graph.links.length}</strong>
+            </div>
+          </aside>
+        ) : null}
+
         {error ? (
           <div className="status-panel">
             <h2>Could not load graph data</h2>
             <p>{error}</p>
           </div>
         ) : graph ? (
-          <Cosmograph className="graph-canvas" points={graph.points} links={graph.links} {...graph.config} />
+          <Cosmograph
+            className="graph-canvas"
+            style={{ width: '100%', height: '100%' }}
+            points={graph.points}
+            links={graph.links}
+            fitViewOnInit
+            fitViewDelay={1500}
+            {...graph.config}
+          />
         ) : (
           <div className="status-panel">
             <h2>Loading graph data</h2>
