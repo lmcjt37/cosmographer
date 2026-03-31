@@ -158,6 +158,29 @@ code {
   box-shadow: 0 12px 32px rgba(84, 66, 38, 0.12);
   overflow: auto;
   max-height: min(34rem, calc(100vh - 13rem));
+  scrollbar-width: thin;
+  scrollbar-color: rgba(84, 66, 38, 0.4) transparent;
+}
+
+.detail-panel::-webkit-scrollbar {
+  width: 18px;
+}
+
+.detail-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detail-panel::-webkit-scrollbar-thumb {
+  border: 10px solid transparent;
+  border-left-width: 6px;
+  border-radius: 999px;
+  background: rgba(84, 66, 38, 0.4);
+  background-clip: content-box;
+}
+
+.detail-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(84, 66, 38, 0.58);
+  background-clip: content-box;
 }
 
 .detail-header {
