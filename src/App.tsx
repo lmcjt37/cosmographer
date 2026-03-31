@@ -36,7 +36,17 @@ async function fetchOptionalJson<T>(path: string): Promise<T | null> {
     throw new Error(`Failed to load ${path}: ${response.status} ${response.statusText}`)
   }
 
-  return (await response.json()) as T
+  const contentType = response.headers.get('content-type')
+
+  if (!contentType?.includes('application/json')) {
+    return null
+  }
+
+  try {
+    return (await response.json()) as T
+  } catch {
+    return null
+  }
 }
 
 export default function App() {
@@ -64,7 +74,7 @@ export default function App() {
           links,
           config: {
             ...indexedConfig,
-            // ...(layoutConfig ?? {}),
+            ...(layoutConfig ?? {}),
           },
         })
       } catch (loadError) {

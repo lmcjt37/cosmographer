@@ -1,4 +1,4 @@
-# Cosmographer 🌌
+# Cosmographer 🪐
 
 Small local web app for rendering pre-indexed Cosmograph datasets from the root `data/` directory.
 
