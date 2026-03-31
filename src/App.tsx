@@ -1,57 +1,78 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Cosmograph } from '@cosmograph/react/cosmograph.js'
-import type { ComponentProps } from 'react'
+import type { CosmographRef } from '@cosmograph/react/cosmograph.js'
+import { GraphConfig, GraphState, LinkRecord, PointRecord, SelectedPointState } from './types'
+import { fetchJson, fetchOptionalJson } from './fetch'
+import { getConfigKey, getNumberField, formatMetadataValue, getMetadataEntries } from './helper'
 
-type PointRecord = Record<string, unknown>
-type LinkRecord = Record<string, unknown>
-type CosmographProps = ComponentProps<typeof Cosmograph>
-type GraphConfig = Omit<CosmographProps, 'points' | 'links'>
+const ZOOM_DURATION_MS = 700
+const ZOOM_SCALE = 3.2
 
-type GraphState = {
-  points: PointRecord[]
-  links: LinkRecord[]
-  config: GraphConfig
-}
+function buildGraphState(points: PointRecord[], links: LinkRecord[], config: GraphConfig): GraphState {
+  const pointIdKey = getConfigKey(config.pointIdBy, 'id')
+  const pointIndexKey = getConfigKey(config.pointIndexBy, 'index')
+  const linkSourceKey = getConfigKey(config.linkSourceIndexBy, getConfigKey(config.linkSourceBy, 'source'))
+  const linkTargetKey = getConfigKey(config.linkTargetIndexBy, getConfigKey(config.linkTargetBy, 'target'))
 
-const DATA_BASE = '/data'
+  const pointByIndex = new Map<number, PointRecord>()
+  const pointIndexById = new Map<unknown, number>()
+  const relatedPointIndicesByIndex = new Map<number, Set<number>>()
+  const relatedLinksByIndex = new Map<number, LinkRecord[]>()
 
-async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${DATA_BASE}/${path}`)
+  for (const point of points) {
+    const pointIndex = getNumberField(point, pointIndexKey)
 
-  if (!response.ok) {
-    throw new Error(`Failed to load ${path}: ${response.status} ${response.statusText}`)
+    if (pointIndex === undefined) {
+      continue
+    }
+
+    pointByIndex.set(pointIndex, point)
+    relatedPointIndicesByIndex.set(pointIndex, new Set())
+    relatedLinksByIndex.set(pointIndex, [])
+
+    const pointId = point[pointIdKey]
+    if (pointId !== undefined) {
+      pointIndexById.set(pointId, pointIndex)
+    }
   }
 
-  return (await response.json()) as T
-}
+  for (const link of links) {
+    const sourceIndex =
+      getNumberField(link, linkSourceKey) ?? pointIndexById.get(link[getConfigKey(config.linkSourceBy, 'source')])
+    const targetIndex =
+      getNumberField(link, linkTargetKey) ?? pointIndexById.get(link[getConfigKey(config.linkTargetBy, 'target')])
 
-async function fetchOptionalJson<T>(path: string): Promise<T | null> {
-  const response = await fetch(`${DATA_BASE}/${path}`)
+    if (typeof sourceIndex !== 'number' || typeof targetIndex !== 'number') {
+      continue
+    }
 
-  if (response.status === 404) {
-    return null
+    relatedPointIndicesByIndex.get(sourceIndex)?.add(targetIndex)
+    relatedPointIndicesByIndex.get(targetIndex)?.add(sourceIndex)
+    relatedLinksByIndex.get(sourceIndex)?.push(link)
+    relatedLinksByIndex.get(targetIndex)?.push(link)
   }
 
-  if (!response.ok) {
-    throw new Error(`Failed to load ${path}: ${response.status} ${response.statusText}`)
-  }
-
-  const contentType = response.headers.get('content-type')
-
-  if (!contentType?.includes('application/json')) {
-    return null
-  }
-
-  try {
-    return (await response.json()) as T
-  } catch {
-    return null
+  return {
+    points,
+    links,
+    config,
+    pointIdKey,
+    pointIndexKey,
+    linkSourceKey,
+    linkTargetKey,
+    pointByIndex,
+    relatedPointIndicesByIndex: new Map(
+      Array.from(relatedPointIndicesByIndex.entries(), ([pointIndex, indices]) => [pointIndex, Array.from(indices)]),
+    ),
+    relatedLinksByIndex,
   }
 }
 
 export default function App() {
+  const graphRef = useRef<CosmographRef>(undefined)
   const [graph, setGraph] = useState<GraphState | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedPoint, setSelectedPoint] = useState<SelectedPointState | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -69,14 +90,13 @@ export default function App() {
           return
         }
 
-        setGraph({
-          points,
-          links,
-          config: {
+        setGraph(
+          buildGraphState(points, links, {
             ...indexedConfig,
             ...(layoutConfig ?? {}),
-          },
-        })
+          }),
+        )
+        setSelectedPoint(null)
       } catch (loadError) {
         if (cancelled) {
           return
@@ -94,6 +114,33 @@ export default function App() {
     }
   }, [])
 
+  const handlePointSelection = (pointIndex?: number) => {
+    if (!graph || pointIndex === undefined) {
+      setSelectedPoint(null)
+      return
+    }
+
+    const point = graph.pointByIndex.get(pointIndex)
+
+    if (!point) {
+      setSelectedPoint(null)
+      return
+    }
+
+    const relatedPointIndices = graph.relatedPointIndicesByIndex.get(pointIndex) ?? []
+    const relatedLinks = graph.relatedLinksByIndex.get(pointIndex) ?? []
+
+    graphRef.current?.zoomToPoint(pointIndex, ZOOM_DURATION_MS, ZOOM_SCALE, false)
+    graphRef.current?.setFocusedPoint(pointIndex)
+
+    setSelectedPoint({
+      index: pointIndex,
+      point,
+      relatedPointIndices,
+      relatedLinks,
+    })
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -108,16 +155,47 @@ export default function App() {
 
       <section className="graph-panel">
         {graph ? (
-          <aside className="debug-panel" aria-label="Graph statistics">
-            <div className="debug-stat">
-              <span className="debug-label">Points</span>
-              <strong className="debug-value">{graph.points.length}</strong>
-            </div>
-            <div className="debug-stat">
-              <span className="debug-label">Links</span>
-              <strong className="debug-value">{graph.links.length}</strong>
-            </div>
-          </aside>
+          <div className="panel-stack">
+            <aside className="debug-panel" aria-label="Graph statistics">
+              <div className="debug-stat">
+                <span className="debug-label">Points</span>
+                <strong className="debug-value">{graph.points.length}</strong>
+              </div>
+              <div className="debug-stat">
+                <span className="debug-label">Links</span>
+                <strong className="debug-value">{graph.links.length}</strong>
+              </div>
+            </aside>
+
+            {selectedPoint ? (
+              <aside className="detail-panel" aria-label="Selected point details">
+                <div className="detail-header">
+                  <p className="detail-kicker">Selected Point</p>
+                  <h2>{formatMetadataValue(selectedPoint.point.label ?? selectedPoint.point[graph.pointIdKey] ?? 'Node')}</h2>
+                </div>
+
+                <div className="detail-summary">
+                  <div className="detail-stat">
+                    <span className="debug-label">Related points</span>
+                    <strong className="debug-value">{selectedPoint.relatedPointIndices.length}</strong>
+                  </div>
+                  <div className="detail-stat">
+                    <span className="debug-label">Related links</span>
+                    <strong className="debug-value">{selectedPoint.relatedLinks.length}</strong>
+                  </div>
+                </div>
+
+                <dl className="metadata-list">
+                  {getMetadataEntries(selectedPoint.point).map(([key, value]) => (
+                    <div className="metadata-row" key={key}>
+                      <dt>{key}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </aside>
+            ) : null}
+          </div>
         ) : null}
 
         {error ? (
@@ -127,13 +205,21 @@ export default function App() {
           </div>
         ) : graph ? (
           <Cosmograph
+            ref={graphRef}
             className="graph-canvas"
             style={{ width: '100%', height: '100%' }}
             points={graph.points}
             links={graph.links}
+            {...graph.config}
             fitViewOnInit
             fitViewDelay={1500}
-            {...graph.config}
+            selectPointOnClick
+            onClick={(pointIndex) => {
+              handlePointSelection(pointIndex)
+            }}
+            onLabelClick={(pointIndex) => {
+              handlePointSelection(pointIndex)
+            }}
           />
         ) : (
           <div className="status-panel">
